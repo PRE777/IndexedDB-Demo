@@ -87,10 +87,11 @@ export default {
     // 添加数据
     addData() {
       let data = {
-        id: "css",
-        name: "css 简书",
+        id: "js",
+        name: "js 简书",
         price: "25",
         create: new Date(),
+        author: ["Som", "Pert", "Lucy"],
       };
       addData(this.db, this.storeName, data);
     },
@@ -99,8 +100,9 @@ export default {
       let data = {
         id: "tss",
         name: "ts 简书",
-        price: 85,
+        price: "25",
         create: new Date(),
+        author: ["Tom", "Hanmeimei", "Lili"],
       };
       updateObject(this.db, this.storeName, data);
     },
@@ -121,24 +123,32 @@ export default {
     // 查询数据
     queryData() {
       // 根据条件搜索
+      let query = null;
       if (this.search) {
-        // getDataByKey(this.db, this.storeName, this.search).then((data) => {
-        //   debugger;
-        //   console.log(data);
-        // });
-        // getDataByIndex(this.db, this.storeName, "price", this.search).then((data) => {
-        //   debugger;
-        //   console.log(data);
-        // });
         let keyRange =
           window.IDBKeyRange ||
           window.webkitIDBKeyRange ||
           window.msIDBKeyRange;
-        let query = keyRange.upperBound(this.search);
-        cursorGetData(this.db, this.storeName, query).then((data) => {
-          console.log(data);
-        });
+        query = keyRange.upperBound(this.search);
       }
+
+      // getDataByKey(this.db, this.storeName, this.search).then((data) => {
+      //   console.log(data);
+      // });
+
+      getDataByIndex(
+        this.db,
+        this.storeName,
+        this.indexName,
+        this.indexValue
+      ).then((data) => {
+        debugger;
+        console.log(data);
+      });
+
+      // cursorGetData(this.db, this.storeName, query).then((data) => {
+      //   console.log(data);
+      // });
     },
     // 清空指定数据库
     clearStore() {

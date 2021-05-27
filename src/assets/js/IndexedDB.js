@@ -39,6 +39,7 @@ export function openDB(dbName, storeName, version = 1) {
             if (!db.objectStoreNames.contains(storeName)) {
                 objectStore = db.createObjectStore(storeName, { keyPath: "id" });
                 objectStore.createIndex("price", "price", { unique: false }); // 创建索引 可以搜索任何字段（必须在此处）
+                objectStore.createIndex("author", "author", { unique: false, multiEntry: true });
 
             }
         }
@@ -82,11 +83,16 @@ export function addData(db, storeName, data) {
  * @param {string} key 主键名称
  * @returns {object} 查询结果
  */
-export function getDataByKey(db, storeName, key) {
+export function getDataByKey(db, storeName, key = null) {
     return new Promise((resolve, reject) => {
-        let transaction = db.transaction([storeName], "readwrite");
+        let transaction = db.transaction([storeName], "readonly");
         let objectStore = transaction.objectStore(storeName);
-        const result = objectStore.get(key);
+        let result;
+        if (key) {
+            result = objectStore.get(key);
+        } else {
+            result = objectStore.getAll();
+        }
         result.onsuccess = function(event) {
             console.log("主键查询结果：", event.target.result);
             resolve(event.target.result);
@@ -108,10 +114,10 @@ export function getDataByKey(db, storeName, key) {
  */
 export function getDataByIndex(db, storeName, indexName, indexValue) {
     return new Promise((resolve, reject) => {
-        let transaction = db.transaction([storeName], 'readwrite');
+        let transaction = db.transaction([storeName], 'readonly');
         let objectStore = transaction.objectStore(storeName);
         let index = objectStore.index(indexName);
-        const result = index.get(indexValue);
+        const result = index.getAll(indexValue);
         result.onerror = function(event) {
             console.log("索引查询失败！__ ^ _ ^__");
             reject(event.target.error);
@@ -134,7 +140,7 @@ export function cursorGetData(db, storeName, query = null) {
     return new Promise((resolve, reject) => {
 
         let list = [];
-        let transaction = db.transaction([storeName], "readwrite");
+        let transaction = db.transaction([storeName], "readonly");
         let objectStore = transaction.objectStore(storeName);
 
         let request = undefined; // 指针对象
@@ -153,7 +159,7 @@ export function cursorGetData(db, storeName, query = null) {
             }
         }
         request.onerror = function(event) {
-            console.log("游标查询失败！__ ^ _ ^__");
+            console.log("游标查询失败！\n Error:", event.target.error);
             reject(event.target.error);
         }
 
@@ -173,8 +179,8 @@ export function updateObject(db, storeName, data) {
     result.onsuccess = function() {
         console.log("更新数据成功！");
     }
-    result.onerror = function() {
-        console.log("更新数据失败！");
+    result.onerror = function(event) {
+        console.log("更新数据失败！\nError:", event.target.error);
     }
 }
 
@@ -207,7 +213,7 @@ export function clearStore(db, storeName) {
         console.log("清空数据库成功！");
     }
     result.onerror = function(event) {
-        console.log("清空数据库失败，Error：", event.target.error);
+        console.log("清空数据库失败！\n Error:", event.target.error);
     }
 }
 
@@ -232,12 +238,12 @@ export function cursorDeleteData(db, storeName, indexName, indexValue) {
                 console.log('游标删除该记录成功')
             }
             deleteRequest.onerror = function(event) {
-                console.log("索引和游标删除指定的数据失败：Error ", event.target.error);
+                console.log("索引和游标删除指定的数据失败！\n Error:", event.target.error);
             }
         }
     }
     result.onerror = function(event) {
-        console.log("索引和游标删除指定的数据失败：Error ", event.target.error);
+        console.log("索引和游标删除指定的数据失败！\n Error:", event.target.error);
     }
 }
 
@@ -249,12 +255,15 @@ export function cursorDeleteData(db, storeName, indexName, indexValue) {
  * @param {String} storeName  仓库名称
  */
 export function deleteStore(db, storeName) {
-    let result = db.deleteObjectStore(storeName); // 
+    // let transaction = db.transaction(storeName, 'readwrite');
+    // let store = transaction.objectStore(storeName);
+    // let result = store.delete();
+    let result = db.deleteObjectStore(storeName);
     result.onsuccess = function(event) {
         console.log("删除仓库成功！");
     }
     result.onerror = function(event) {
-        console.log("删除仓库失败：Error ", event.target.error);
+        console.log("删除仓库失败！\nError:", event.target.error);
     }
 }
 
@@ -278,6 +287,6 @@ export function deleteDB(dbName) {
         console.log("删除数据库成功！");
     }
     result.onerror = function(event) {
-        console.log("删除数据库失败：Error ", event.target.error);
+        console.log("删除数据库失败！\nError:", event.target.error);
     }
 }
