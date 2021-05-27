@@ -15,7 +15,14 @@ export function openDB(dbName, storeName, version = 1) {
             console.log("数据库准备就绪！");
             db.onversionchange = function() {
                 db.close();
-                alert("Database is outdated, please reload the page!");
+                // alert("Database is outdated, please reload the page!");
+                let r = confirm("Database is outdated, please reload the page!");
+                if (r) {
+                    // true 刷新界面
+                    window.location.reload();
+                } else {
+                    // false
+                }
             };
             resolve(db);
         }
@@ -41,13 +48,13 @@ export function openDB(dbName, storeName, version = 1) {
         }
     })
 }
+
 /**
  * 新增数据
- * @param {object} db 数据库实例
+ * @param {IDBDatabase} db 数据库实例
  * @param {string} storeName 仓库名称
  * @param {object} data 数据
  */
-
 export function addData(db, storeName, data) {
     let transaction = db.transaction([storeName], "readwrite"); //事务对象，指定表格名称和操作模式（"只读" readonly or "读写" readwrite）
     let objectStore = transaction.objectStore(storeName); // 仓库对象
@@ -70,7 +77,7 @@ export function addData(db, storeName, data) {
 
 /**
  * 通过主键读取数据
- * @param {object} db 数据库实例
+ * @param {IDBDatabase} db 数据库实例
  * @param {string} storeName 仓库名称
  * @param {string} key 主键名称
  * @returns {object} 查询结果
@@ -90,9 +97,10 @@ export function getDataByKey(db, storeName, key) {
         }
     });
 }
+
 /**
  * 通过带索引的字段读取数据
- * @param {object} db 数据库实例
+ * @param {IDBDatabase} db 数据库实例
  * @param {string} storeName 仓库名城管
  * @param {string} indexName 索引名称
  * @param {string} indexValue 索引值
@@ -102,7 +110,6 @@ export function getDataByIndex(db, storeName, indexName, indexValue) {
     return new Promise((resolve, reject) => {
         let transaction = db.transaction([storeName], 'readwrite');
         let objectStore = transaction.objectStore(storeName);
-        debugger
         let index = objectStore.index(indexName);
         const result = index.get(indexValue);
         result.onerror = function(event) {
@@ -118,8 +125,9 @@ export function getDataByIndex(db, storeName, indexName, indexValue) {
 
 /**
  * 通过游标读取数据
- * @param {object} db 数据库实例
+ * @param {IDBDatabase} db 数据库实例
  * @param {string} storeName 仓库名称
+ * @param {IDBKeyRange} query 查询条件
  * @returns {Array} 获取到的数据
  */
 export function cursorGetData(db, storeName, query = null) {
@@ -154,11 +162,11 @@ export function cursorGetData(db, storeName, query = null) {
 
 /**
  * 更新数据库
- * @param {object} db 数据库实例
+ * @param {IDBDatabase} db 数据库实例
  * @param {string} storeName 仓库名称
  * @param {object} data 需要更新的数据
  */
-export function updateData(db, storeName, data) {
+export function updateObject(db, storeName, data) {
     let transaction = db.transaction([storeName], "readwrite");
     let objectStore = transaction.objectStore(storeName);
     let result = objectStore.put(data);
@@ -172,11 +180,11 @@ export function updateData(db, storeName, data) {
 
 /**
  * 通过主键删除数据
- * @param {object} db 数据库实例
+ * @param {IDBDatabase} db 数据库实例
  * @param {string} storeName 仓库名
  * @param {object} key 主键名称
  */
-export function deleteData(db, storeName, key) {
+export function deleteDataWithKey(db, storeName, key) {
     let transaction = db.transaction([storeName], "readwrite");
     let objectStore = transaction.objectStore(storeName);
     let result = objectStore.delete(key);
@@ -187,7 +195,12 @@ export function deleteData(db, storeName, key) {
         console.log("删除数据失败！");
     }
 }
-// 清空指定数据库
+
+/**
+ * 清空指定仓库数据
+ * @param {IDBDatabase} db 数据库实例
+ * @param {string} storeName 仓库名称
+ */
 export function clearStore(db, storeName) {
     let result = db.transaction([storeName], "readwrite").objectStore(storeName).clear();
     result.onsuccess = function() {
@@ -198,8 +211,73 @@ export function clearStore(db, storeName) {
     }
 }
 
-// 通过索引和游标删除指定的数据
+/**
+ * 通过索引和游标删除指定的数据
+ * @param {IDBDatabase} db 数据库实例
+ * @param {string} storeName 仓库名称
+ * @param {string} indexName 索引名称
+ * @param {string} indexValue 索引名
+ */
 export function cursorDeleteData(db, storeName, indexName, indexValue) {
-    let store = db.transaction(storeName, 'readwrite').objectStore(storeName);
+    let keyRange =
+        window.IDBKeyRange || window.webkitIDBKeyRange || window.msIDBKeyRange;
+    let store = db.transaction([storeName], 'readwrite').objectStore(storeName);
+    let result = store.index(indexName).openCursor(keyRange.only(indexValue));
+    result.onsuccess = function(event) {
+        let cursor = event.target.result;
+        let deleteRequest;
+        if (cursor) {
+            deleteRequest = cursor.delete(); // 请求删除当前项
+            deleteRequest.onsuccess = function(event) {
+                console.log('游标删除该记录成功')
+            }
+            deleteRequest.onerror = function(event) {
+                console.log("索引和游标删除指定的数据失败：Error ", event.target.error);
+            }
+        }
+    }
+    result.onerror = function(event) {
+        console.log("索引和游标删除指定的数据失败：Error ", event.target.error);
+    }
+}
 
+/**
+ * 删除指定的对象仓库
+ * 与 IDBDatabase.createObjectStore 一样，此方法只能在versionchang事务中调用。
+ * 否则会报错：The database is not running a version change transaction.
+ * @param {IDBDatabase} db 数据库实例    
+ * @param {String} storeName  仓库名称
+ */
+export function deleteStore(db, storeName) {
+    let result = db.deleteObjectStore(storeName); // 
+    result.onsuccess = function(event) {
+        console.log("删除仓库成功！");
+    }
+    result.onerror = function(event) {
+        console.log("删除仓库失败：Error ", event.target.error);
+    }
+}
+
+/**
+ * 关闭数据库
+ * @param {object} db 数据库实例
+ */
+export function closeDB(db) {
+    db.close();
+    console.log('数据库已关闭！')
+}
+
+/**
+ * 删除数据库
+ * @param {string} dbName 数据库名称
+ */
+export function deleteDB(dbName) {
+    let indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
+    let result = indexedDB.deleteDatabase(dbName);
+    result.onsuccess = function(event) {
+        console.log("删除数据库成功！");
+    }
+    result.onerror = function(event) {
+        console.log("删除数据库失败：Error ", event.target.error);
+    }
 }
