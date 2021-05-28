@@ -1,15 +1,25 @@
+import Vue from "vue";
+
 let objectStores = {
     objectStoreName: 'shopping cart',
     index: [
         // 索引 
         // unique 是否可以重复 
         // multiEntry 值是数组才时使用 默认false, 当 true 以数组成员作为索引键，
-        { name: 'groupId', option: { unique: false, multiEntry: true } },
+        // { name: 'groupId', option: { unique: false, multiEntry: true } },
+        { name: 'groupId', option: { unique: false } },
         { name: 'price', option: { unique: false } }
     ]
 }
 
-// 封装IndexedDB类
+
+/**
+ * 封装IndexedDB类
+ * @param {String} dbName 数据库名称
+ * @param {Object} objectStores 仓库信息
+ * @param {Number} version 数据库版本
+ *  
+ */
 export class MyIndexedDB {
 
     constructor(dbName, objectStores, version = 1) {
@@ -19,18 +29,22 @@ export class MyIndexedDB {
         this._objectStores = objectStores || {};
         this._myIndexedDB = window.indexedDB || window.webkitIndexedDB || window.mozIndexedDB || window.msIndexedDB
         this._myIDBkeyRange = window.IDBKeyRange || window.webkitIDBKeyRange || window.msIDBKeyRange;
-        this.openDB();
+        // this.openDB();
     }
     _vueToObject = (vueObject) => {
         let _object = vueObject;
         // 针对Vue3做的类型判断
-        if (Vue.isRef(_object)) {
-            // 如果是 vue 的 ref 类型，替换成 ref.value
-            _object = _object.value;
+        if (typeof Vue.isRef === "function") {
+            if (Vue.isRef(_object)) {
+                // 如果是 vue 的 ref 类型，替换成 ref.value
+                _object = _object.value;
+            }
         }
-        if (Vue.isReactive(_object)) {
-            // 如果是 vue 的 reactive 类型，那么获取原型，否则会报错
-            _object = Vue.toRaw(_object);
+        if (typeof Vue.isReactive === "function") {
+            if (Vue.isReactive(_object)) {
+                // 如果是 vue 的 reactive 类型，那么获取原型，否则会报错
+                _object = Vue.toRaw(_object);
+            }
         }
         return _object
     };
@@ -42,7 +56,6 @@ export class MyIndexedDB {
      * @returns {Promise}
      */
     openDB = (dbName, version) => {
-
         let name = this._dbName || dbName;
         let ver = this._version || version;
         // 记录数据库版本是否变更
@@ -52,10 +65,11 @@ export class MyIndexedDB {
         const dbPromise = new Promise((resolve, reject) => {
             // 数据库成功打开回调
             dbRequest.onsuccess = (event) => {
+                console.log("数据库准备就绪！");
                 this._db = event.target.result;
                 // 监听版本发生变化
-                db.onversionchange = function() {
-                    db.close();
+                this._db.onversionchange = function() {
+                    this._db.close();
                     // alert("Database is outdated, please reload the page!");
                     let r = confirm("Database is outdated, please reload the page!");
                     if (r) {
@@ -132,6 +146,11 @@ export class MyIndexedDB {
                             resolve(event.target.result);
                         };
                     transaction.onerror = (event) => {
+                        console.log("数据写入失败！ Error:", event.target.error);
+                        // if (event.target.error.name == "ConstraintError") {
+                        //     event.preventDefault(); // 防止事务终止
+                        //     event.stopPropagation(); // 停止错误冒泡，阻止其冒泡传播
+                        // }
                         reject(event.target.error);
                     }
                 }
@@ -258,24 +277,33 @@ export class MyIndexedDB {
 
     /**
      * 删除整个store
+     * 该方法有错误，请慎用:
+     * 与 IDBDatabase.createObjectStore 一样，此方法只能在versionchang事务中调用。
+     * 否则会报错：The database is not running a version change transaction.
      * @param {string} storeName 仓库名称
      * @returns {Promise}
      */
     deleteStore = (storeName) => {
         const objectPromise = new Promise((resolve, reject) => {
             const _deleteStore = () => {
-                    const transaction = this._db.transaction(storeName, 'readwrite');
-                    transaction
-                        .objectStore(storeName)
-                        .delete()
-                        .onsuccess = (event) => {
-                            console.log("删除仓库成功！");
-                            resolve(event)
-                        };
-                    transaction.onerror = (event) => {
+                    // const transaction = this._db.transaction(storeName, 'readwrite');
+                    // const store = transaction.objectStore(storeName);
+                    // const request = store.delete();
+                    // const request = store.deleteObjectStore();
+                    const request = this._db.deleteObjectStore(storeName);
+                    request.onsuccess = (event) => {
+                        console.log("删除仓库成功！");
+                        resolve(event)
+                    };
+                    request.onerror = (event) => {
+                        debugger
                         console.log("删除仓库失败！");
                         reject(event);
                     };
+                    // transaction.onerror = (event) => {
+                    //     console.log("删除仓库失败！");
+                    //     reject(event);
+                    // };
                 }
                 // 判断数据库是否断开
             if (typeof this._db === "undefined") {
@@ -472,15 +500,5 @@ export class MyIndexedDB {
         });
         return objectPromise;
     }
-
-
-
-
-
-
-
-
-
-
 
 }
