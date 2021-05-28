@@ -98,11 +98,12 @@ export default {
     // 更新数据
     updateData() {
       let data = {
-        id: "tss",
+        id: "tss1",
         name: "ts 简书",
-        price: "25",
+        price: "30",
         create: new Date(),
         author: ["Tom", "Hanmeimei", "Lili"],
+        address:"xxxxxx"
       };
       updateObject(this.db, this.storeName, data);
     },
@@ -142,7 +143,6 @@ export default {
         this.indexName,
         this.indexValue
       ).then((data) => {
-        debugger;
         console.log(data);
       });
 

@@ -153,7 +153,7 @@ export function cursorGetData(db, storeName, query = null) {
             let cursor = event.target.result;
             if (cursor) {
                 list.push(cursor.value);
-                cursor.continue(); // 遍历存储对象中的所有内容
+                cursor.continue(); // 将光标移至匹配范围中的下一个值(光标继续向下移动)
             } else {
                 resolve(list);
             }
