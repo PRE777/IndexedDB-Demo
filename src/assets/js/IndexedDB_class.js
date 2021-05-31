@@ -68,12 +68,11 @@ export class MyIndexedDB {
                 console.log("数据库准备就绪！");
                 this._db = event.target.result;
                 // 监听版本发生变化
-                this._db.onversionchange = function() {
-                    this._db.close();
-                    // alert("Database is outdated, please reload the page!");
+                this._db.onversionchange = () => {
                     let r = confirm("Database is outdated, please reload the page!");
                     if (r) {
                         // true 刷新界面
+                        this._db.close();
                         window.location.reload();
                     } else {
                         // false
@@ -151,7 +150,7 @@ export class MyIndexedDB {
                         //     event.preventDefault(); // 防止事务终止
                         //     event.stopPropagation(); // 停止错误冒泡，阻止其冒泡传播
                         // }
-                        reject(event.target.error);
+                        // reject(event.target.error);
                     }
                 }
                 // 判断数据库是否断开
@@ -351,7 +350,7 @@ export class MyIndexedDB {
                 const store = transaction.objectStore(storeName);
                 let dbRequest;
                 //判断获取key对应的对象，还是获取全部
-                if (typeof key === 'undefined') {
+                if (typeof key === 'undefined' || key === "") {
                     dbRequest = store.getAll();
                 } else {
                     dbRequest = store.get(key);
@@ -409,10 +408,11 @@ export class MyIndexedDB {
      * @returns  {Promise}
      */
     findObject = (storeName, findInfo = {}, page = {}) => {
+        debugger
         const _start = page.start || 0;
         const _count = page.count || 0;
         const _end = _start + _count;
-        const _discription = page.discription || "prev"; // 默认降序
+        const _discription = page.description || "prev"; // 默认降序
         // 查询条件，按照主键或者索引查询
         let keyRange = null
         if (typeof findInfo.indexName !== "undefined") {
@@ -420,10 +420,10 @@ export class MyIndexedDB {
                 const indexValue = findInfo.indexValue;
                 const rangeDic = {
                     "=": IDBKeyRange.only(indexValue),
-                    ">": IDBKeyRange.upperBound(indexValue, true),
-                    ">=": IDBKeyRange.upperBound(indexValue, false),
-                    "<": IDBKeyRange.lowerBound(indexValue, true),
-                    "<=": IDBKeyRange.lowerBound(indexValue, false),
+                    ">": IDBKeyRange.lowerBound(indexValue, true),
+                    ">=": IDBKeyRange.lowerBound(indexValue, false),
+                    "<": IDBKeyRange.upperBound(indexValue, true),
+                    "<=": IDBKeyRange.upperBound(indexValue, false),
                 };
                 switch (findInfo.indexKind) {
                     case "=":
@@ -480,6 +480,7 @@ export class MyIndexedDB {
                     };
                     transaction.oncomplete = (event) => {
                         // 查询结束
+                        debugger
                         resolve(dataList);
                     };
                     transaction.onerror = (event) => {

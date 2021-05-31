@@ -12,9 +12,18 @@
     <button @click="addData">添加数据</button>
     <br />
     <button @click="updateData">更新数据</button>
-    <br>
+    <br />
+    <button @click="clearStore">清空仓库</button>
+    <br />
     <button @click="deleteStore">Delete Store</button>
-
+    <br />
+    <button @click="deleteDataBase">删除数据库</button>
+    <br />
+    <span>主键：</span>
+    <input type="text" v-model="mainKey" />
+    <button @click="getDataWithKey">主键获取对象</button>
+    <br />
+    <button @click="findObject">查找数据</button>
     <!--
     <br />
     <button @click="deleteData">delete Data</button>
@@ -57,6 +66,7 @@ export default {
       version: 1, // 数据库版本
       indexName: "", // 索引名称
       indexValue: "", // 索引值
+      mainKey: "", // 主键
       objectStores: {
         objectStoreName: "shopping cart",
         index: [
@@ -73,17 +83,18 @@ export default {
   methods: {
     openIndexedDB() {
       this.db = new MyIndexedDB(this.dbName, this.objectStores, this.version);
+      this.db.openDB();
     },
     addData() {
       let data = {
-        id: 1,
-        groupId: 1,
-        title: "这是一个博客",
-        addTime: "2020-10-15",
-        introduction: "这是博客简介",
-        concent: "这是博客的详细内容<br>第二行",
-        viewCount: 1,
-        agreeCount: 1,
+        id: 5,
+        groupId: 5,
+        title: "jjfjf",
+        addTime: new Date(),
+        introduction: "扣刷卡缴费",
+        concent: "看看书，开口说，(^o^)/~o",
+        viewCount: 35,
+        agreeCount: 10,
         price: "50￥",
       };
       this.db.addObject(this.storeName, data);
@@ -95,9 +106,48 @@ export default {
       };
       this.db.updateObject(this.storeName, data);
     },
-    deleteStore(){
-        this.db.deleteStore(this.storeName);
-    }
+    clearStore() {
+      this.db.clearStore(this.storeName);
+    },
+    deleteStore() {
+      this.db.deleteStore(this.storeName);
+    },
+    deleteDataBase() {
+      this.db.deleteDB(this.dbName);
+    },
+    getDataWithKey() {
+      this.db.getObjectWithKey(this.storeName, this.mainKey).then((data) => {
+        console.log(data);
+      });
+    },
+    findObject() {
+      let findInfo = {
+        indexName: "groupId", // 索引名称
+        indexValue: 5, // 索引值
+        indexKind: "<=", // '>','>=','<','<=','between' 索引方式,
+        betweenInfo: {
+          lower: 2,
+          upper: 4,
+          lowerOpen: false,
+          upperOpen: true,
+        },
+        where: (object) => {
+          if (object.viewCount < 10) {
+            return true;
+          }
+          return false;
+        },
+      };
+      let page = {
+        start: 0,
+        count: 10,
+        description: "next",
+      };
+
+      this.db.findObject(this.storeName, findInfo, page).then((data) => {
+        console.log(data);
+      });
+    },
   },
 };
 </script>
