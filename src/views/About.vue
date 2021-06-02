@@ -77,6 +77,8 @@ export default {
   components: {
     HelloWorld,
   },
+  mounted() {
+  },
   methods: {
     openIndexedDB() {
       openDB(this.dbName, this.storeName, this.version).then((db) => {

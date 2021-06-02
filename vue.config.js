@@ -17,7 +17,7 @@ module.exports = {
     devServer: {
         host: "localhost",
         port: 8093,
-        https: false,
+        https: true,
         disableHostCheck: true, // 处理host不识别问题
         open: true, //自动打开浏览器
         hotOnly: true, //是否热更新
